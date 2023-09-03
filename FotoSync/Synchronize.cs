@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using Quartz;
 
 namespace FotoSync;
 
@@ -30,7 +29,7 @@ public sealed class Synchronize : IJob
 
         var type = _configuration.GetValue<string>("PhotoType");
         var directory =
-            $"{_configuration.GetValue<string>("DestinationFolder").TrimEnd(Path.DirectorySeparatorChar)}{Path.DirectorySeparatorChar}{type}";
+            $"{_configuration.GetValue<string>("DestinationFolder")!.TrimEnd(Path.DirectorySeparatorChar)}{Path.DirectorySeparatorChar}{type}";
         var logfile =
             $"{directory.TrimEnd(Path.DirectorySeparatorChar)}{Path.DirectorySeparatorChar}log.json";
 
@@ -52,8 +51,9 @@ public sealed class Synchronize : IJob
         }
 
         var req = await _client.GetAsync($"/api/photo/list/{type}");
-        if (req.IsSuccessStatusCode)
+        if (!req.IsSuccessStatusCode)
         {
+            _logger.LogWarning("Kunne ikke hente billeder, fik statuskode: {StatusCode}", req.StatusCode);
             return;
         }
 
@@ -79,8 +79,8 @@ public sealed class Synchronize : IJob
                 continue;
             }
 
-            var preq = await _client.GetAsync(photo);
-            if (!preq.IsSuccessStatusCode)
+            var photoRequest = await _client.GetAsync(photo);
+            if (!photoRequest.IsSuccessStatusCode)
             {
                 _logger.LogError("Fejl ved hentning af billede");
                 continue;
@@ -106,7 +106,7 @@ public sealed class Synchronize : IJob
                 )
             )
             {
-                await preq.Content.CopyToAsync(fs);
+                await photoRequest.Content.CopyToAsync(fs);
                 log.LogEntries.Add(new LogEntry(fileName));
             }
 
@@ -117,6 +117,8 @@ public sealed class Synchronize : IJob
             logfile,
             JsonConvert.SerializeObject(log, Formatting.Indented)
         );
+        
+        _logger.LogInformation("Færdig for nu - starter igen om 30 sekunder");
     }
 
     private record LogFile(List<LogEntry> LogEntries);
