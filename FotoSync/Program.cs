@@ -24,13 +24,7 @@ static IHostBuilder CreateHostBuilder(string[] args) =>
             {
                 services
                     .AddHttpClient(nameof(Synchronize))
-                    .ConfigureHttpMessageHandlerBuilder(
-                        builder =>
-                            builder.PrimaryHandler = new HttpClientHandler()
-                            {
-                                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-                            }
-                    );
+                    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler(){ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator});
                 services.AddQuartz(q =>
                 {
                     q.ScheduleJob<Synchronize>(
