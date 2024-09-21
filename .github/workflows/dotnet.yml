@@ -36,5 +36,15 @@ jobs:
         # A file, directory or wildcard pattern that describes what to upload
         path: FotoSync.zip
         # The desired behavior if no files are found using the provided path.
-  
-              
+    - name: Generate release tag
+      id: generate_release_tag
+      uses: amitsingh-007/next-release-tag@v4.0.0
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        tag_prefix: ''
+        tag_template: 'yyyy.mm.dd.i'
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: FotoSync.zip
+        tag_name: ${{ steps.generate_release_tag.outputs.next_release_tag }}
